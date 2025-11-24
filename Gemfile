@@ -48,6 +48,8 @@ group :development do
 end
 
 group :test do
+  gem 'cucumber-rails', require: false
+  gem 'database_cleaner', '~> 1.6'
   # Adds support for Capybara system testing and selenium driver
   gem 'capybara', '>= 3.26'
   gem 'selenium-webdriver', '>= 4.0.0.rc1'
