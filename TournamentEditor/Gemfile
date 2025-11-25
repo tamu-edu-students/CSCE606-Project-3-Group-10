@@ -11,6 +11,7 @@ gem 'sqlite3', '~> 1.4'
 gem 'puma', '~> 6.0'
 # Use SCSS for stylesheets
 gem 'sass-rails', '>= 6'
+gem 'sass-embedded'
 
 # Use Tailwind CSS for styling
 gem 'tailwindcss-rails'
