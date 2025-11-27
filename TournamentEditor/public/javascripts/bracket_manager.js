@@ -1,12 +1,8 @@
 /**
- * BracketManager - Manages bracket visualization and state for TB-107
+ * BracketManager - Manages bracket visualization and state
  *
- * Handles:
- * - Bracket visualization using brackets-viewer.js
- * - Drag-and-drop in Draft Mode
- * - Validation of bracket moves
- * - Local storage persistence
- * - Backend communication
+ * Handles bracket visualization, drag-and-drop in Draft Mode,
+ * validation, local storage persistence, and backend communication
  */
 
 class BracketManager {
@@ -18,15 +14,12 @@ class BracketManager {
 		this.draggedParticipant = null;
 		this.dragTarget = null;
 
-		// Sync with TournamentState if available
 		if (typeof window !== 'undefined' && window.tournamentState) {
 			this.isDraftMode = !window.tournamentState.isActiveMode();
 		}
 
-		// Initialize from local storage
 		this.loadFromLocalStorage();
 
-		// Listen for bracket mode changes
 		if (typeof window !== 'undefined') {
 			window.addEventListener('tournamentStateChanged', (e) => {
 				if (e.detail.changeType === 'bracketMode') {
@@ -35,13 +28,11 @@ class BracketManager {
 			});
 		}
 
-		// Initialize UI (wait for DOM if needed)
 		if (document.readyState === 'loading') {
 			document.addEventListener('DOMContentLoaded', () => {
 				this.updateUI();
 			});
 		} else {
-			// Wait a bit for elements to be available
 			setTimeout(() => {
 				this.updateUI();
 			}, 100);
@@ -58,25 +49,16 @@ class BracketManager {
 			return;
 		}
 
-		// Ensure we have a power-of-2 number of participants (pad with byes if needed)
 		const numParticipants = this.getNextPowerOfTwo(competitorNames.length);
 		this.competitors = [...competitorNames];
 
-		// Pad with byes if needed
 		while (this.competitors.length < numParticipants) {
-			this.competitors.push(null); // null represents a bye
+			this.competitors.push(null);
 		}
 
-		// Generate bracket structure for brackets-viewer
 		this.bracketData = this.generateSingleEliminationBracket(this.competitors);
-
-		// Render the bracket
 		this.renderBracket();
-
-		// Save to local storage
 		this.saveToLocalStorage();
-
-		// Update UI
 		this.updateUI();
 	}
 
@@ -89,7 +71,6 @@ class BracketManager {
 		const numParticipants = participants.length;
 		const numRounds = Math.log2(numParticipants);
 
-		// Create participants array (filter out nulls for the participants list)
 		const participantList = participants
 			.map((name, index) =>
 				name
@@ -102,16 +83,12 @@ class BracketManager {
 			)
 			.filter((p) => p !== null);
 
-		// Create matches for all rounds
 		const matches = [];
 		let matchId = 1;
 		let matchesInRound = numParticipants / 2;
 		let roundNumber = 1;
-
-		// Track matches per round for next_match_id calculation
 		const matchesPerRound = [];
 
-		// First pass: create all matches and track them by round
 		while (matchesInRound >= 1) {
 			const currentRoundMatches = [];
 
@@ -123,13 +100,12 @@ class BracketManager {
 					round_id: roundNumber,
 					number: i + 1,
 					child_count: 0,
-					status: 0, // 0 = Locked, 1 = Waiting, 2 = Ready, 3 = Running, 4 = Completed
+					status: 0,
 					opponent1: null,
 					opponent2: null,
 					next_match_id: null,
 				};
 
-				// For first round, assign participants
 				if (roundNumber === 1) {
 					const p1Index = i * 2;
 					const p2Index = i * 2 + 1;
@@ -152,8 +128,6 @@ class BracketManager {
 						};
 					}
 				} else {
-					// For later rounds, set up to receive winners from previous round
-					// This will be populated when previous round completes
 					match.opponent1 = null;
 					match.opponent2 = null;
 				}
@@ -168,15 +142,12 @@ class BracketManager {
 			roundNumber++;
 		}
 
-		// Second pass: set next_match_id for all matches except final
 		for (let roundIdx = 0; roundIdx < matchesPerRound.length - 1; roundIdx++) {
 			const currentRound = matchesPerRound[roundIdx];
 			const nextRound = matchesPerRound[roundIdx + 1];
 
 			for (let i = 0; i < currentRound.length; i++) {
 				const match = currentRound[i];
-				// Each match feeds into a match in the next round
-				// Two matches feed into one match in the next round
 				const nextRoundMatchIndex = Math.floor(i / 2);
 				if (nextRoundMatchIndex < nextRound.length) {
 					match.next_match_id = nextRound[nextRoundMatchIndex].id;
@@ -184,7 +155,6 @@ class BracketManager {
 			}
 		}
 
-		// Create stage structure
 		const stages = [
 			{
 				id: 1,
@@ -199,7 +169,7 @@ class BracketManager {
 		return {
 			stages: stages,
 			matches: matches,
-			matchGames: [], // Not used for single elimination
+			matchGames: [],
 			participants: participantList,
 		};
 	}
@@ -219,16 +189,11 @@ class BracketManager {
 			return;
 		}
 
-		// Clear existing bracket
 		container.innerHTML = '';
-
-		// Hide empty state
 		this.hideEmptyState();
 
-		// Render with brackets-viewer
 		try {
 			if (typeof bracketsViewer !== 'undefined') {
-				// Add draft-mode class if in draft mode
 				if (this.isDraftMode) {
 					container.classList.add('draft-mode');
 				} else {
@@ -242,9 +207,7 @@ class BracketManager {
 					highlightParticipantOnHover: true,
 				});
 
-				// Add drag-and-drop support in Draft Mode
 				if (this.isDraftMode) {
-					// Wait a bit for DOM to update
 					setTimeout(() => {
 						this.attachDragAndDrop();
 					}, 300);
@@ -264,14 +227,11 @@ class BracketManager {
 		const bracketContainer = document.getElementById('bracket-viewer');
 		if (!bracketContainer) return;
 
-		// Find all participant elements in brackets-viewer structure
-		// brackets-viewer uses specific classes like .bracket-participant or similar
 		const participantElements = bracketContainer.querySelectorAll(
 			'[data-participant-id], .participant, .bracket-participant'
 		);
 
 		participantElements.forEach((element) => {
-			// Make draggable
 			element.setAttribute('draggable', 'true');
 			element.style.cursor = 'grab';
 			element.classList.add('draggable-participant');
@@ -293,7 +253,6 @@ class BracketManager {
 			});
 		});
 
-		// Add drop zones - brackets-viewer creates slots for participants
 		const dropZones = bracketContainer.querySelectorAll(
 			'[data-participant-id], .participant, .bracket-participant, .bracket-slot, [class*="slot"]'
 		);
@@ -330,37 +289,28 @@ class BracketManager {
 	 * @param {HTMLElement} targetElement - Target slot element
 	 */
 	handleParticipantMove(sourceElement, targetElement) {
-		// Get participant data
 		const sourceName = sourceElement.textContent.trim();
 		const targetName = targetElement.textContent.trim();
 
-		// Validate the move
 		if (!this.validateMove(sourceName, targetName)) {
 			console.warn('Invalid move: validation failed');
 			return;
 		}
 
-		// Update bracket data structure
-		// This is a simplified version - in a real implementation, you'd need to
-		// map DOM elements back to bracket data structure
 		const sourceIndex = this.competitors.indexOf(sourceName);
 		const targetIndex = this.competitors.indexOf(targetName);
 
 		if (sourceIndex !== -1) {
-			// Swap or move participant
 			if (targetIndex !== -1) {
-				// Swap
 				[this.competitors[sourceIndex], this.competitors[targetIndex]] = [
 					this.competitors[targetIndex],
 					this.competitors[sourceIndex],
 				];
 			} else {
-				// Move to empty slot
 				this.competitors[targetIndex] = sourceName;
 				this.competitors[sourceIndex] = null;
 			}
 
-			// Regenerate bracket
 			this.bracketData = this.generateSingleEliminationBracket(this.competitors);
 			this.renderBracket();
 		}
@@ -373,13 +323,9 @@ class BracketManager {
 	 * @returns {boolean} True if move is valid
 	 */
 	validateMove(sourceName, targetName) {
-		// Basic validation: prevent moving to final match if previous matches are empty
-		// This is a simplified validation - you may need more complex logic
 		if (!sourceName || sourceName === '') {
 			return false;
 		}
-
-		// Additional validation logic can be added here
 		return true;
 	}
 
@@ -392,7 +338,6 @@ class BracketManager {
 		this.updateUI();
 
 		if (this.bracketData) {
-			// Re-render with appropriate mode settings
 			this.renderBracket();
 		}
 	}
@@ -452,9 +397,6 @@ class BracketManager {
 			return { isValid: false, errors };
 		}
 
-		// Check for empty matches in later rounds when earlier rounds are incomplete
-		// Add more validation logic as needed
-
 		return { isValid: errors.length === 0, errors };
 	}
 
@@ -462,7 +404,6 @@ class BracketManager {
 	 * Confirm bracket changes and save
 	 */
 	confirmBracketChanges() {
-		// Validate first
 		const validation = this.validateBracket();
 
 		if (!validation.isValid) {
@@ -470,12 +411,8 @@ class BracketManager {
 			return;
 		}
 
-		// Save to local storage
 		this.saveToLocalStorage();
-
-		// Send to backend
 		this.sendToBackend();
-
 		alert('Bracket changes confirmed and saved!');
 	}
 
@@ -488,15 +425,13 @@ class BracketManager {
 			return;
 		}
 
-		// Prepare data for backend - send the full brackets-viewer data structure
 		const data = {
 			bracket_type: 'single_elimination',
 			participants: this.competitors.filter((c) => c !== null),
-			bracket_data: this.bracketData, // Full brackets-viewer data structure
+			bracket_data: this.bracketData,
 			mode: this.isDraftMode ? 'draft' : 'active',
 		};
 
-		// Send to backend endpoint
 		const csrfToken = document.querySelector('meta[name="csrf-token"]');
 		const token = csrfToken ? csrfToken.content : '';
 
@@ -553,9 +488,7 @@ class BracketManager {
 					this.competitors = state.competitors || [];
 					this.isDraftMode = state.mode === 'draft';
 
-					// Render if we have data
 					if (this.bracketData) {
-						// Wait for DOM to be ready
 						if (document.readyState === 'loading') {
 							document.addEventListener('DOMContentLoaded', () => {
 								this.renderBracket();
@@ -584,35 +517,28 @@ class BracketManager {
 	}
 }
 
-// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
 	module.exports = BracketManager;
 }
 
-// Make available globally
 if (typeof window !== 'undefined') {
 	window.BracketManager = BracketManager;
 
-	// Initialize a global instance when DOM is ready
 	function initializeBracketManager() {
 		window.bracketManager = new BracketManager();
 
-		// Sync with TournamentState if available
 		if (window.tournamentState) {
 			const isActiveMode = window.tournamentState.isActiveMode();
 			window.bracketManager.handleModeChange(isActiveMode);
 		}
 	}
 
-	// Wait for DOM to be ready
 	if (document.readyState === 'loading') {
 		document.addEventListener('DOMContentLoaded', initializeBracketManager);
 	} else {
-		// DOM already ready, but wait a bit for brackets-viewer to load
 		setTimeout(initializeBracketManager, 100);
 	}
 
-	// Global functions for button clicks
 	window.validateBracket = function () {
 		if (window.bracketManager) {
 			const validation = window.bracketManager.validateBracket();

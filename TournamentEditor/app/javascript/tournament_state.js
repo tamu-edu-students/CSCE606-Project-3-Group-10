@@ -1,15 +1,11 @@
 /**
- * TournamentState - Manages the bracket mode state for TB-106
+ * TournamentState - Manages the bracket mode state
  *
- * Tracks:
- * - bracketMode: Boolean (true = Active, false = Draft)
- *
- * Note: Competitor management, matches, and CSV export functionality
- * are implemented in separate issues (TB-104, TB-102, etc.)
+ * Tracks bracketMode: Boolean (true = Active, false = Draft)
  */
 class TournamentState {
 	constructor() {
-		this.bracketMode = false; // false = Draft, true = Active
+		this.bracketMode = false;
 	}
 
 	/**
@@ -43,7 +39,6 @@ class TournamentState {
 	 * @param {string} changeType - Type of change that occurred
 	 */
 	_notifyChange(changeType) {
-		// Dispatch custom event for state changes
 		if (typeof window !== 'undefined' && window.dispatchEvent) {
 			window.dispatchEvent(
 				new CustomEvent('tournamentStateChanged', {
@@ -57,15 +52,11 @@ class TournamentState {
 	}
 }
 
-// Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
 	module.exports = TournamentState;
 }
 
-// Make available globally
 if (typeof window !== 'undefined') {
 	window.TournamentState = TournamentState;
-
-	// Initialize a global instance
 	window.tournamentState = new TournamentState();
 }
