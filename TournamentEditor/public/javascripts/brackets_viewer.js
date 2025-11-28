@@ -129,7 +129,7 @@ class BracketsViewer {
 		matchContainer.append(opponents);
 
 		if (connection) {
-			this.setupConnection(opponents, matchContainer, connection);
+			this.setupConnection(opponents, matchContainer, connection, roundNumber);
 		}
 
 		return matchContainer;
@@ -209,13 +209,16 @@ class BracketsViewer {
 		setupListeners(this.participantRefs[participantId]);
 	}
 
-	setupConnection(opponents, matchContainer, connection) {
+	setupConnection(opponents, matchContainer, connection, roundNumber) {
 		if (!connection) return;
 
 		const { toMatchId, toPosition } = connection;
 
 		matchContainer.classList.add('connect-next');
-		opponents.classList.add('connect-previous');
+
+		if (roundNumber > 1) {
+			opponents.classList.add('connect-previous');
+		}
 
 		matchContainer.setAttribute('data-next-match-id', toMatchId);
 		opponents.setAttribute('data-next-position', toPosition);
