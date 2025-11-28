@@ -1,5 +1,4 @@
 <div class="h-full flex flex-col p-6">
-  <!-- Empty State (shown when no bracket exists) -->
   <div id="bracket-empty-state" class="flex flex-col items-center justify-center h-full">
     <div class="text-center max-w-2xl">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-24 mx-auto text-muted-foreground mb-6">
@@ -12,10 +11,8 @@
     </div>
   </div>
 
-  <!-- Bracket Viewer Container (shown when bracket exists) -->
   <div id="bracket-viewer-container" class="h-full flex flex-col" style="display: none;">
-    <!-- Draft Mode Controls -->
-    <div id="draft-mode-controls" class="flex items-center justify-between mb-4 p-4 bg-card border border-border rounded-lg" style="display: none;">
+    <div id="draft-mode-controls" class="flex items-center justify-between mb-4 p-4 bg-card border border-border rounded-lg gap-4 flex-wrap" style="display: none;">
       <div class="flex items-center gap-2">
         <div class="flex items-center justify-center w-10 h-10 rounded-full bg-primary/10">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5 text-primary">
@@ -27,7 +24,26 @@
           <p class="text-sm text-muted-foreground">Drag competitors to organize your bracket</p>
         </div>
       </div>
-      <div class="flex gap-3">
+      
+      <div class="flex items-center gap-2">
+        <label for="competitor-count-input" class="text-sm font-medium text-foreground">Competitors:</label>
+        <input 
+          type="number" 
+          id="competitor-count-input" 
+          class="w-20 px-2 py-1 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          min="2"
+          max="64"
+          placeholder="8"
+        />
+      </div>
+      
+      <div class="flex gap-3 ml-auto">
+        <button 
+          onclick="resetBracket()" 
+          class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 transition-opacity font-medium"
+        >
+          Reset
+        </button>
         <button 
           onclick="validateBracket()" 
           class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 transition-opacity font-medium"
@@ -43,41 +59,17 @@
       </div>
     </div>
 
-    <!-- Bracket Viewer -->
-    <div id="bracket-viewer" class="brackets-viewer flex-1 overflow-auto p-4 bg-card border border-border rounded-lg">
-      <!-- brackets-viewer.js will render bracket here -->
+    <div class="flex gap-4 flex-1">
+      <div id="bracket-viewer" class="brackets-viewer flex-1 overflow-auto p-4 bg-card border border-border rounded-lg">
+      </div>
+
+      <div id="competitor-list-container" class="w-64 flex-shrink-0 p-4 bg-card border border-border rounded-lg overflow-auto" style="display: none;">
+        <h3 class="font-semibold text-foreground mb-3">Competitors</h3>
+        <ul id="competitor-list" class="space-y-2">
+        </ul>
+      </div>
     </div>
   </div>
 </div>
 
-<style>
-  /* Tailwind-styled overrides for brackets-viewer */
-  #bracket-viewer {
-    --bracket-color: hsl(var(--border));
-    --bracket-bg: hsl(var(--card));
-    --participant-bg: hsl(var(--card));
-    --participant-border: hsl(var(--border));
-    --participant-text: hsl(var(--foreground));
-  }
-
-  /* Draft mode drag-and-drop styling */
-  #bracket-viewer.draft-mode .draggable-participant {
-    cursor: grab;
-    transition: all 0.2s ease;
-  }
-
-  #bracket-viewer.draft-mode .draggable-participant:hover {
-    opacity: 0.8;
-    transform: translateY(-2px);
-  }
-
-  #bracket-viewer.draft-mode .draggable-participant:active {
-    cursor: grabbing;
-  }
-
-  #bracket-viewer .drag-over {
-    background-color: rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 0.5);
-  }
-</style>
 
