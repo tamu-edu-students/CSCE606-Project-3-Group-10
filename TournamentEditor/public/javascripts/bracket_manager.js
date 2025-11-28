@@ -531,6 +531,10 @@ class BracketManager {
 			this._resetBracketToCleanState();
 		}
 
+		// Clear the opponent from the same source match if they're in later rounds
+		// This handles the case where both competitors from the same match are dragged forward
+		this._clearOpponentFromSameSourceMatch(participant.id, sourceMatch);
+
 		this._markMatchAsWon(sourceMatch, participant.id, sourcePos);
 
 		if (targetMatch.round_id > sourceMatch.round_id + 1) {
@@ -838,6 +842,23 @@ class BracketManager {
 				this._clearMatchResults(match);
 			}
 		});
+	}
+
+	_clearOpponentFromSameSourceMatch(participantId, sourceMatch) {
+		if (!this.bracketData || !this.bracketData.matches) return null;
+
+		let opponentId = null;
+		if (sourceMatch.opponent1 && sourceMatch.opponent1.id === participantId) {
+			opponentId = sourceMatch.opponent2?.id;
+		} else if (sourceMatch.opponent2 && sourceMatch.opponent2.id === participantId) {
+			opponentId = sourceMatch.opponent1?.id;
+		}
+
+		if (!opponentId) return null;
+
+		this._clearParticipantFromLaterRounds(opponentId, sourceMatch.round_id);
+
+		return opponentId;
 	}
 
 	_handleSameOrBackwardMove(sourceMatch, targetMatch, sourcePos, targetPos) {

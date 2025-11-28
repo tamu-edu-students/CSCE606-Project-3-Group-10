@@ -367,3 +367,21 @@ Feature: Drag and Drop with Auto-Win
     And Round 2 Match 1 should show "-" with result "-" in position 2
     And Round 3 Match 1 should show "Competitor 2" with result "-" in position 1
     And Round 3 Match 1 should show "-" with result "-" in position 2
+
+  @javascript
+  Scenario: Drag 2 Competitors to Final Round from Same Round 1 in 8 Competitor bracket
+    Given the initial bracket has:
+        | round | match | position | competitor   |
+        | 1     | 1     | 1        | Competitor 1 |
+        | 1     | 1     | 2        | Competitor 2 |
+        | 1     | 2     | 1        | Competitor 3 |
+        | 1     | 2     | 2        | Competitor 4 |
+    When I drag "Competitor 1" to Round 3 Match 1 position 1
+    And I drag "Competitor 2" to Round 3 Match 1 position 2
+    Then Round 3 Match 1 should show "-" with result "-" in position 1
+    And Round 3 Match 1 should show "Competitor 2" with result "-" in position 2
+    And Round 2 Match 1 should show "Competitor 2" with result "W" in position 1
+    And Round 2 Match 1 should show "-" with result "-" in position 2
+    And Round 1 Match 1 should show "Competitor 2" with result "W" in position 1
+    And Round 1 Match 1 should show "Competitor 1" with result "L" in position 2
+    
