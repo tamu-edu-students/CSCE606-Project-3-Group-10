@@ -483,7 +483,7 @@ class BracketManager {
   		let csvContent = '';
 			
   		// Add header row
-  		let header = "*COMPETITORS*";
+  		let header = "*competitors*";
   		csvContent += header + '\r\n';
 			
   		// Add data rows
@@ -492,10 +492,7 @@ class BracketManager {
   		  csvContent += line + '\r\n';
   		});
 
-  		header = "*BRACKET_DATA*";
-  		csvContent += header + '\r\n';
-
-  		header = "*STAGES*";
+  		header = "*stages*";
   		csvContent += header + '\r\n';
     	let headers = Object.keys(this.bracketData.stages[0]);
   		csvContent += headers.join(',') + '\r\n';
@@ -514,7 +511,7 @@ class BracketManager {
   			});
 		}
 
-  		header = "*MATCHES*";
+  		header = "*matches*";
   		csvContent += header + '\r\n';
     	headers = Object.keys(this.bracketData.matches[0]);
   		csvContent += headers.join(',') + '\r\n';
@@ -533,7 +530,7 @@ class BracketManager {
   			});
 		}
 
-  		header = "*MATCH_GAMES*";
+  		header = "*matchGames*";
   		csvContent += header + '\r\n';
 		if(this.bracketData.matchGames > 0)
 		{
@@ -555,7 +552,7 @@ class BracketManager {
   			});
 		}
 
-  		header = "*PARTICIPANTS*";
+  		header = "*participants*";
   		csvContent += header + '\r\n';
     	headers = Object.keys(this.bracketData.participants[0]);
   		csvContent += headers.join(',') + '\r\n';
@@ -618,6 +615,147 @@ class BracketManager {
 	}
 
 	/**
+	 * Load bracket state from CSV
+	 */
+	LoadFromCSV(file) {
+  		if (file) {
+			const reader = new FileReader();
+			reader.onload = function(e) {
+				const text = e.target.result;
+				// You can process the CSV string here
+				document.getElementById('output').textContent = text;
+				// Example basic processing: split into lines and then values
+				const lines = text.split('\n');
+				const result = lines.map(line => line.split(','));
+				console.log(result); // 2D array of CSV data
+			};
+			reader.readAsText(file);
+			
+			const lines = csvText.split('\n');
+    		const result = [];
+    		const headers = lines[0].split(',');
+
+			let i = 0;
+			while(i < lines.length)
+			{
+    		    const currentLine = lines[i].split(',');
+				switch (currentLine){
+  					case "*competitors*":
+					  ++i;
+					  while(lines[i]!="*stages*")
+					  {
+						this.competitors.push(lines[i]);	
+						++i;
+					  }
+  					  break;
+  					case "*stages*":
+					  ++i;
+    				  let headers = lines[i++].split(',');
+					  while(lines[i] != "*matches*")
+					  {
+    					let currentline = lines[j].split(',');
+						
+    					// Ensure the line has the same number of fields as headers
+    					if (currentline.length === headers.length) {
+    					    for (let j = 0; j < headers.length; j++) {
+    							try {
+    					        	this.bracketData.stages[headers[j].trim()] = JSON.parse(currentline[j].trim());
+    							} catch (e) {
+    					        	this.bracketData.stages[headers[j].trim()] = currentline[j].trim();
+    							}
+    					    }
+    					    result.push(obj);
+    					}
+    				  }
+					  ++i;
+  					  break;
+  					case "*matches*":
+					  ++i;
+    				  headers = lines[i++].split(',');
+					  while(lines[i]!="*matchGames*")
+					  {
+    					let currentline = lines[j].split(',');
+						
+    					// Ensure the line has the same number of fields as headers
+    					if (currentline.length === headers.length) {
+    					    for (let j = 0; j < headers.length; j++) {
+    							try {
+    					        	this.bracketData.matches[headers[j].trim()] = JSON.parse(currentline[j].trim());
+    							} catch (e) {
+    					        	this.bracketData.matches[headers[j].trim()] = currentline[j].trim();
+    							}
+    					    }
+    					    result.push(obj);
+    					}
+					  }
+  					  break;
+  					case "*matchGames*":
+					  ++i;
+					  if(lines[i] != "*participants*")
+					  {
+    				 	headers = lines[i++].split(',');
+					  }
+					  while(lines[i]!="*participants*")
+					  {
+    					let currentline = lines[j].split(',');
+						
+    					// Ensure the line has the same number of fields as headers
+    					if (currentline.length === headers.length) {
+    					    for (let j = 0; j < headers.length; j++) {
+    							try {
+    					        	this.bracketData.matchGames[headers[j].trim()] = JSON.parse(currentline[j].trim());
+    							} catch (e) {
+    					        	this.bracketData.matchGames[headers[j].trim()] = currentline[j].trim();
+    							}
+    					    }
+    					    result.push(obj);
+    					}
+					  }
+  					  break;
+  					case "*participants*":
+					  ++i;
+    				  headers = lines[i++].split(',');
+					  while(i < lines.length)
+					  {
+    					const obj = {};
+    					const currentline = lines[j].split(',');
+						
+    					// Ensure the line has the same number of fields as headers
+    					if (currentline.length === headers.length) {
+    					    for (let j = 0; j < headers.length; j++) {
+    							try {
+    					        	this.bracketData.participants[headers[j].trim()] = JSON.parse(currentline[j].trim());
+    							} catch (e) {
+    					        	this.bracketData.participants[headers[j].trim()] = currentline[j].trim();
+    							}
+    					    }
+    					    result.push(obj);
+    					}
+					  }
+  					  break;
+				}
+				++i;
+			}
+
+    		for (let i = 1; i < lines.length; i++) {
+    		    const obj = {};
+    		    const currentline = lines[i].split(',');
+			
+				switchcase 
+
+    		    // Ensure the line has the same number of fields as headers
+    		    if (currentline.length === headers.length) {
+    		        for (let j = 0; j < headers.length; j++) {
+    		            obj[headers[j].trim()] = currentline[j].trim();
+    		        }
+    		        result.push(obj);
+    		    }
+    		}
+    		return result;
+		}
+	}
+
+	/**
 	 * Get next power of two
 	 * @param {number} n - Input number
 	 * @returns {number} Next power of two
@@ -676,6 +814,12 @@ if (typeof window !== 'undefined') {
 	window.SaveToCSV = function() {
 		if(window.bracketManager) {
 			window.bracketManager.SaveToCSV();
+		}
+	}
+
+	window.LoadFromCSV = function(file) {
+		if(window.bracketManager) {
+			window.bracketManager.LoadFromCSV(file);
 		}
 	}
 }
