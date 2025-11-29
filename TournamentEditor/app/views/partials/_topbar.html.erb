@@ -10,14 +10,11 @@
       onclick="ExportBracket()">
         Export Bracket
       </button>
-      <%= form_with url: root_path, local: true, multipart: true, class: "inline" do |form| %>
-        <%= form.file_field :file, class: "hidden", id: "csv-file-input", onchange: "this.form.submit()" %>
-
-      <% end %>		
+	  <input type="file" id="csvFile" accept=".csv" />
 	  <button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 transition-opacity font-medium text-nowrap overflow-hidden text-ellipsis whitespace-nowrap"
-    	onclick="ImportBracket(document.getElementById('csv-file-input'))">
-    	    Import Bracket
-    </button>
+      	onclick="ImportBracket()">
+      	Import Bracket
+      </button>	
     </div>
     
     <!-- Mobile hamburger menu button -->
@@ -67,12 +64,9 @@
     onclick="ExportBracket()">
         Export Bracket
     </button>
-      <%= form_with  url: root_path, local: true, multipart: true, class: "inline" do |form| %>
-        <%= form.file_field :file, class: "hidden", id: "csv-file-input", onchange: "this.form.submit()" %>
-      <% end %>
 	<button class="px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:opacity-90 transition-opacity font-medium text-nowrap overflow-hidden text-ellipsis whitespace-nowrap"
-    	onclick="ImportBracket(document.getElementById('csv-file-input'))">
-    	    Import Bracket
+    	onclick="ImportBracket()">
+    	Import Bracket
     </button>
   </div>
 </div>
@@ -83,7 +77,8 @@
   }
 
   function ImportBracket() {
-        window.LoadFromCSV();
+		const file = document.getElementById('csvFile').files[0];
+        window.LoadFromCSV(file);
   }
 
   function toggleMobileMenu() {
