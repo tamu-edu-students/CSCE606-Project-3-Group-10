@@ -713,11 +713,18 @@ class BracketManager {
 								let data = currentline[k];
 								console.log(data);
 
-    							try {
-    						    	obj[headers[j].trim()] = JSON.parse(data);
-    							} catch (e) {
-    						    	obj[headers[j].trim()] = data;
-    							}
+									if(data === undefined || data === "")
+									{
+    						    		obj[headers[j].trim()] = null;
+									}
+									else
+									{
+    									try {
+    						    			obj[headers[j].trim()] = JSON.parse(data);
+    									} catch (e) {
+    						    			obj[headers[j].trim()] = data;
+    									}
+									}
     						}
 							this.bracketData.matches.push(obj);
 							++i;
