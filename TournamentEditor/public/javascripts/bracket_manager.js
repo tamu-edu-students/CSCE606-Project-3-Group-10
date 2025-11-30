@@ -201,6 +201,7 @@ class BracketManager {
 					container.classList.remove('draft-mode');
 				}
 
+				console.log(this.competitors);
 				console.log(this.bracketData);
 
 				bracketsViewer.render(this.bracketData, {
@@ -616,6 +617,28 @@ class BracketManager {
 		}
 	}
 
+	splitMixedString(str) {
+	 const result = [];
+	 let current = '';
+	 let depth = 0;
+		
+	 for (let char of str) {
+	   if (char === '{') depth++;
+	   if (char === '}') depth--;
+	
+	   if (char === ',' && depth === 0) {
+	     result.push(current.trim());
+	     current = '';
+	   } else {
+	     current += char;
+	   }
+	 }
+	
+	 if (current.trim()) result.push(current.trim());
+	 return result;
+	}
+
+	
 	/**
 	 * Load bracket state from CSV
 	 */
@@ -663,38 +686,40 @@ class BracketManager {
     						let currentline = lines[i].split(',');
 
     						// Ensure the line has the same number of fields as  headers
-    						if (currentline.length === headers.length) {
-								let obj = {};
-    						    for (let j = 0; j < headers.length; j++) {
-    								try {
-    						        	obj[headers[j].trim()] = JSON.parse(currentline[j].trim());
-    								} catch (e) {
-    						        	obj[headers[j].trim()] = currentline[j].trim();
-    								}
-    						    }
-								this.bracketData.stages.push(obj);
+							let obj = {};
+    						for (let j = 0; j < headers.length; j++) {
+    							try {
+    						    	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    							} catch (e) {
+    						    	obj[headers[j].trim()] = currentline[j].trim();
+    							}
     						}
+							this.bracketData.stages.push(obj);
 						 	++i;
     					  }
   						  break;
   						case "*matches*":
 						  console.log("_*matches*_");
+						  this.bracketData.matches = [];
 						  ++i;
     					  headers = lines[i++].split(',');
 						  while(lines[i]!="*matchGames*")
 						  {
-    						let currentline = lines[i].split(',');
+    						let currentline = this.splitMixedString(lines[i]);
 
     						// Ensure the line has the same number of fields as headers
-    						if (currentline.length === headers.length) {
-    						    for (let j = 0; j < headers.length; j++) {
-    								try {
-    						        	this.bracketData.matches[headers[j].trim()] = JSON.parse(currentline[j].trim());
-    								} catch (e) {
-    						        	this.bracketData.matches[headers[j].trim()] = currentline[j].trim();
-    								}
-    						    }
+							let obj = {};
+    						for (let j = 0, k = j; j < headers.length; j++, k++) {
+								let data = currentline[k];
+								console.log(data);
+
+    							try {
+    						    	obj[headers[j].trim()] = JSON.parse(data);
+    							} catch (e) {
+    						    	obj[headers[j].trim()] = data;
+    							}
     						}
+							this.bracketData.matches.push(obj);
 							++i;
 						  }
   						  break;
@@ -712,13 +737,15 @@ class BracketManager {
 
     						// Ensure the line has the same number of fields as headers
     						if (currentline.length === headers.length) {
+								let obj = {};
     						    for (let j = 0; j < headers.length; j++) {
     								try {
-    						        	this.bracketData.matchGames[headers[j].trim()] = JSON.parse(currentline[j].trim());
+    						        	obj[headers[j].trim()] = JSON.parse(currentline[j]);
     								} catch (e) {
-    						        	this.bracketData.matchGames[headers[j].trim()] = currentline[j].trim();
+    						        	obj[headers[j].trim()] = currentline[j].trim();
     								}
     						    }
+								this.bracketData.matchGames.push(obj);
     						}
 							++i;
 						  }
@@ -759,19 +786,13 @@ class BracketManager {
 							 console.log( this.competitors);
 
 				if (this.bracketData) {
-					this.saveToLocalStorage();
-							 console.log("DONE: ")
-							 console.log( this.bracketData);
-							 console.log( this.competitors);
-					if (document.readyState === 'loading') {
-						document.addEventListener('DOMContentLoaded', () => {
-							this.renderBracket();
-							this.updateUI();
-						});
-					} else {
-						this.renderBracket();
+						console.log("DONE: ")
+						console.log( this.bracketData);
+						console.log( this.competitors);
+
+						this.saveToLocalStorage();
 						this.updateUI();
-					}
+						this.renderBracket();
 				}
 			};
 			reader.readAsText(file);
