@@ -73,16 +73,18 @@ class BracketManager {
 		const numRounds = Math.log2(numParticipants);
 
 		const participantList = participants
-			.map((name, index) =>
-				name
-					? {
-							id: index + 1,
-							tournament_id: 1,
-							name: name,
-					  }
-					: null
-			)
+			.map((name, index) => {
+				if (name && name !== 'null') {  // Check for both null and string 'null'
+					return {
+						id: index + 1,
+						tournament_id: 1,
+						name: name,
+					};
+				}
+				return null;
+			})
 			.filter((p) => p !== null);
+
 
 		const matches = [];
 		let matchId = 1;

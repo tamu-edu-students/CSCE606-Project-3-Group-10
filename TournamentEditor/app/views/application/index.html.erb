@@ -1,3 +1,6 @@
+<script src="/javascripts/bracket_manager.js"></script>
+<script src="/javascripts/competitor_edit_delete.js"></script>
+
 <div class="h-full flex flex-col p-6">
   <!-- Empty State (shown when no bracket exists) -->
   <div id="bracket-empty-state" class="flex flex-col items-center justify-center h-full">
@@ -79,5 +82,27 @@
     background-color: rgba(59, 130, 246, 0.1);
     border-color: rgba(59, 130, 246, 0.5);
   }
-</style>
+  /* Participant controls styling */
+.participant {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
 
+.participant-controls {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: 0.5rem;
+}
+
+#bracket-viewer.draft-mode .participant:hover {
+  background-color: rgba(59, 130, 246, 0.05);
+}
+
+/* Input styling for inline editing */
+.participant-name input {
+  font-size: inherit;
+  font-weight: inherit;
+}
+</style>
