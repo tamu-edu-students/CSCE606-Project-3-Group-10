@@ -124,7 +124,12 @@ class BracketManager {
 					const p1Index = i * 2;
 					const p2Index = i * 2 + 1;
 
-					if (participants[p1Index]) {
+					// Find participant by array index
+					const p1Name = participants[p1Index];
+					const p2Name = participants[p2Index];
+
+					if (p1Name && p1Name !== 'null') {
+						// Use the index + 1 as the ID (matching participantList)
 						match.opponent1 = {
 							id: p1Index + 1,
 							position: 0,
@@ -133,7 +138,8 @@ class BracketManager {
 						};
 					}
 
-					if (participants[p2Index]) {
+					if (p2Name && p2Name !== 'null') {
+						// Use the index + 1 as the ID (matching participantList)
 						match.opponent2 = {
 							id: p2Index + 1,
 							position: 1,
@@ -156,6 +162,7 @@ class BracketManager {
 			roundNumber++;
 		}
 
+		// Link matches to next rounds
 		for (let roundIdx = 0; roundIdx < matchesPerRound.length - 1; roundIdx++) {
 			const currentRound = matchesPerRound[roundIdx];
 			const nextRound = matchesPerRound[roundIdx + 1];
