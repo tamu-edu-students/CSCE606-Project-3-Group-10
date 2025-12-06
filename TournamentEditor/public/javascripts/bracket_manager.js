@@ -1,3 +1,10 @@
+/**
+ * BracketManager - Manages bracket visualization and state
+ *
+ * Handles bracket visualization, drag-and-drop in Draft Mode,
+ * validation, local storage persistence, and backend communication
+ */
+
 class BracketManager {
 	constructor() {
 		this.bracketData = null;
@@ -226,87 +233,44 @@ class BracketManager {
 		}
 	}
 
+	/**
+	 * Attach drag-and-drop functionality for Draft Mode
+	 */
 	attachDragAndDrop() {
 		const bracketContainer = document.getElementById('bracket-viewer');
-		if (!bracketContainer) {
-			console.error('Bracket container not found');
-			return;
-		}
+		if (!bracketContainer) return;
 
-		console.log('Attaching drag and drop...');
+		const participantElements = bracketContainer.querySelectorAll(
+			'[data-participant-id], .participant, .bracket-participant'
+		);
 
-		// First add match IDs to the DOM
-		this.addMatchIdsToDOM();
-
-		const participantElements = bracketContainer.querySelectorAll('.participant');
-		console.log(`Found ${participantElements.length} participant elements`);
-
-		if (participantElements.length === 0) {
-			console.warn('No participant elements found - bracket may not be rendered yet');
-			return;
-		}
-
-		participantElements.forEach((element, index) => {
-			// Skip BYE participants
-			const nameDiv = element.querySelector('.name');
-			if (!nameDiv || nameDiv.classList.contains('bye')) {
-				console.log(`Skipping BYE participant at index ${index}`);
-				return;
-			}
-
-			// CRITICAL FIX: Also check the text content for BYE
-			const nameText = nameDiv.textContent.trim().replace(/^#\d+\s*/, '');
-			if (nameText === 'BYE' || nameText === 'null' || nameText === '' || nameText === 'TBD') {
-				console.log(`Skipping BYE/empty participant at index ${index}: "${nameText}"`);
-				return;
-			}
-
+		participantElements.forEach((element) => {
 			element.setAttribute('draggable', 'true');
 			element.style.cursor = 'grab';
 			element.classList.add('draggable-participant');
-
-			// Get match info
-			const matchElement = element.closest('.match');
-			if (matchElement) {
-				const matchId = matchElement.dataset.matchId;
-				element.dataset.matchId = matchId;
-				console.log(`Added drag to participant ${index} in match ${matchId}: "${nameText}"`);
-			}
 
 			element.addEventListener('dragstart', (e) => {
 				this.draggedParticipant = element;
 				element.style.opacity = '0.5';
 				e.dataTransfer.effectAllowed = 'move';
-				
-				// Get competitor name
-				const competitorName = nameDiv.textContent.trim().replace(/^#\d+\s*/, '');
-				e.dataTransfer.setData('text/plain', competitorName);
-				
-				// Store source match ID
-				const sourceMatchId = element.dataset.matchId;
-				if (sourceMatchId) {
-					e.dataTransfer.setData('sourceMatchId', sourceMatchId);
-				}
-				
-				console.log('Dragging:', competitorName, 'from match:', sourceMatchId);
+				e.dataTransfer.setData('text/plain', element.textContent.trim());
 			});
 
 			element.addEventListener('dragend', (e) => {
 				element.style.opacity = '1';
 				if (this.dragTarget) {
 					this.dragTarget.classList.remove('drag-over');
-					this.dragTarget.style.backgroundColor = '';
 				}
 				this.draggedParticipant = null;
 				this.dragTarget = null;
 			});
 		});
 
-		const dropZones = bracketContainer.querySelectorAll('.participant');
-		console.log(`Found ${dropZones.length} drop zones`);
+		const dropZones = bracketContainer.querySelectorAll(
+			'[data-participant-id], .participant, .bracket-participant, .bracket-slot, [class*="slot"]'
+		);
 
-		dropZones.forEach((zone, index) => {
-			// Allow dropping on any slot (including BYE slots)
+		dropZones.forEach((zone) => {
 			zone.addEventListener('dragover', (e) => {
 				e.preventDefault();
 				e.dataTransfer.dropEffect = 'move';
@@ -325,22 +289,9 @@ class BracketManager {
 				zone.classList.remove('drag-over');
 				zone.style.backgroundColor = '';
 
-				if (!this.draggedParticipant || this.draggedParticipant === zone) {
-					return;
+				if (this.draggedParticipant && this.draggedParticipant !== zone) {
+					this.handleParticipantMove(this.draggedParticipant, zone);
 				}
-
-				// Get competitor name and source match
-				const competitorName = e.dataTransfer.getData('text/plain');
-				const sourceMatchId = e.dataTransfer.getData('sourceMatchId');
-				
-				// Get target match
-				const targetMatchElement = zone.closest('.match');
-				const targetMatchId = targetMatchElement?.dataset.matchId;
-
-				console.log('Drop:', competitorName, 'from match', sourceMatchId, 'to match', targetMatchId);
-
-				// Handle the drop
-				this.handleCompetitorDrop(competitorName, sourceMatchId, targetMatchId, zone);
 			});
 		});
 

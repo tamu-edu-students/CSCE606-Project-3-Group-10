@@ -117,6 +117,7 @@ GEM
     date (3.5.0)
     diff-lcs (1.6.2)
     docile (1.4.1)
+    docile (1.4.1)
     erubi (1.13.1)
     factory_bot (6.5.6)
       activesupport (>= 6.1.0)
@@ -388,8 +389,7 @@ DEPENDENCIES
   sass-embedded
   selenium-webdriver (>= 4.0.0.rc1)
   shoulda-matchers (~> 6.0)
-  simplecov
-  simplecov-console
+  simplecov (~> 0.22)
   sqlite3 (~> 1.4)
   tailwindcss-rails
   turbolinks (~> 5)
