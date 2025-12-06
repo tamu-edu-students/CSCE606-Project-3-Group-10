@@ -4,6 +4,9 @@
 # instead of editing this one. Cucumber will automatically load all features/**/*.rb
 # files.
 
+# Load SimpleCov BEFORE requiring Rails or any application code
+# This ensures code coverage tracking starts before any code is loaded
+require_relative 'simplecov_setup'
 
 require 'cucumber/rails'
 
