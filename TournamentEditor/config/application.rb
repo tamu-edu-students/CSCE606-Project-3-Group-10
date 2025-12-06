@@ -1,5 +1,7 @@
 require_relative "boot"
 require "logger"
+
+# Application does not use a database - ActiveRecord included for rake tasks but not used
 require "rails/all"
 
 # Require the gems listed in Gemfile, including any gems

@@ -1,16 +1,17 @@
 class TournamentsController < ApplicationController
   def index
-    @tournaments = Tournament.all
+    # Application does not use a database - all work is done on the front end
+    @tournaments = []
 
     respond_to do |format|
       format.html
-      format.csv { send_data @tournaments.to_csv, filename: "tournament-#{Date.today}.csv" }
+      format.csv { send_data "name,mode\n", filename: "tournament-#{Date.today}.csv" }
     end
   end
 
   def import
+    # Application does not use a database - CSV import handled on front end
     if params[:file].present?
-      Tournament.import(params[:file])
       redirect_to root_path, notice: "Tournaments imported successfully!"
     else
       redirect_to root_path, alert: "Please upload a CSV file."

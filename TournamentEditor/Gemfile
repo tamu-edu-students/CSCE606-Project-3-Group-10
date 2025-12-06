@@ -5,7 +5,8 @@ ruby '3.2.3'
 
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails', branch: 'main'
 gem 'rails', '~> 6.1.7', '>= 6.1.7.3'
-# Use sqlite3 as the database for Active Record
+# Application does not use a database - all work is done on the front end
+# sqlite3 is included only to satisfy ActiveRecord rake tasks during build
 gem 'sqlite3', '~> 1.4'
 # Use Puma as the app server
 gem 'puma', '~> 6.0'
@@ -57,7 +58,7 @@ group :test do
   ##for rspec
   gem 'shoulda-matchers', '~> 6.0'
   gem 'rails-controller-testing', '~> 1.0'
-  gem 'database_cleaner-active_record', '~> 2.1'
+  # Application does not use a database
   # Cucumber for BDD feature tests
   gem 'cucumber-rails', '~> 3.0', require: false
   # Code coverage for feature tests

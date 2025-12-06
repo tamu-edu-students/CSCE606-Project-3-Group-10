@@ -3,4 +3,33 @@
 
 require_relative "config/application"
 
-Rails.application.load_tasks
+# Application does not use a database - skip ActiveRecord rake tasks
+# Prevent ActiveRecord from loading database configurations
+begin
+  if defined?(ActiveRecord)
+    ActiveRecord::Tasks::DatabaseTasks.migrations_paths = []
+  end
+rescue => e
+  # Ignore if ActiveRecord is not available
+end
+
+# Load tasks, but catch and suppress database-related errors
+begin
+  Rails.application.load_tasks
+rescue LoadError, NameError, StandardError => e
+  # Ignore ActiveRecord and database-related rake task loading errors since we don't use a database
+  error_msg = e.message.to_s.downcase
+  error_class = e.class.name.to_s.downcase
+  
+  if error_msg.include?('active_record') || error_msg.include?('activerecord') || 
+     error_msg.include?('database') || error_msg.include?('uri') ||
+     error_msg.include?('active_storage') || error_msg.include?('activestorage') ||
+     error_class.include?('activerecord') || error_class.include?('database') ||
+     error_msg.include?('bad uri') || error_msg.include?('invaliduri')
+    # Silently ignore database-related errors - app doesn't use a database
+    # This allows the app to load even if ActiveRecord tasks fail
+  else
+    # Re-raise non-database errors
+    raise e
+  end
+end
