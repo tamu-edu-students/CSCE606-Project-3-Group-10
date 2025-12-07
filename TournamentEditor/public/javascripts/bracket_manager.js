@@ -1254,7 +1254,111 @@ class BracketManager {
 			localStorage.setItem('tournament_bracket_state', JSON.stringify(state));
 		}
 	}
+/**Collapse commentComment on line R483DJPetika commented on Dec 6, 2025 DJPetikaon Dec 6, 2025MemberMore actionsshouldn't have deleted thisReactWrite a replyCode has comments. Press enter to view.
+	 * Save bracket state to CSV
+	 */
+	SaveToCSV() {
+  		let csvContent = '';
+			
+  		// Add header row
+  		let header = "*competitors*";
+  		csvContent += header + '\r\n';
+			
+  		// Add data rows
+  		this.competitors.forEach(function(row) {
+  		  let line = row;
+  		  csvContent += line + '\r\n';
+  		});
 
+  		header = "*stages*";
+  		csvContent += header + '\r\n';
+    	let headers = Object.keys(this.bracketData.stages[0]);
+  		csvContent += headers.join(',') + '\r\n';
+
+		if(this.bracketData.stages.length > 0)
+		{
+  			this.bracketData.stages.forEach(function(row) {
+				let line = Object.values(row).map(item => {
+    				if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+    				    return JSON.stringify(item);
+    				}
+    				return item;
+				}).join(',');
+  			  	csvContent += line + '\r\n';
+  			});
+		}
+
+  		header = "*matches*";
+  		csvContent += header + '\r\n';
+    	headers = Object.keys(this.bracketData.matches[0]);
+  		csvContent += headers.join(',') + '\r\n';
+
+		if(this.bracketData.matches.length > 0)
+		{
+  			this.bracketData.matches.forEach(function(row) {
+				let line = Object.values(row).map(item => {
+    				if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+    				    return JSON.stringify(item);
+    				}
+    				return item;
+				}).join(',');
+  				csvContent += line + '\r\n';
+  			});
+		}
+
+  		header = "*matchGames*";
+  		csvContent += header + '\r\n';
+		if(this.bracketData.matchGames > 0)
+		{
+    		headers = Object.keys(this.bracketData.matchGames[0]);
+  			csvContent += headers.join(',') + '\r\n';
+		}
+
+		if(this.bracketData.matchGames.length > 0)
+		{
+  			this.bracketData.matchGames.forEach(function(row) {
+  			  	let line = Object.values(row).map(item => {
+    				if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+    				    return JSON.stringify(item);
+    				}
+    				return item;
+				}).join(',');
+  			  	csvContent += line + '\r\n';
+  			});
+		}
+
+  		header = "*participants*";
+  		csvContent += header + '\r\n';
+    	headers = Object.keys(this.bracketData.participants[0]);
+  		csvContent += headers.join(',') + '\r\n';
+
+		if(this.bracketData.participants.length > 0)
+		{
+  			this.bracketData.participants.forEach(function(row) {
+				let line = Object.values(row).map(item => {
+    				if (typeof item === 'object' && item !== null && !Array.isArray(item)) {
+    				    return JSON.stringify(item);
+    				}
+    				return item;
+				}).join(',');
+  			 	csvContent += line + '\r\n';
+  			});
+		}
+
+  		const encodedUri = encodeURI("data:text/csv;charset=utf-8,\uFEFF" + csvContent);
+  		const link = document.createElement("a");
+
+  		link.setAttribute("href", encodedUri);
+  		link.setAttribute("download", "tournament.csv");
+  		document.body.appendChild(link);
+
+  		link.click();
+  		document.body.removeChild(link);
+	}
+
+	/**
+	 * Load bracket state from local storage
+	 */
 	loadFromLocalStorage() {
 		if (typeof localStorage !== 'undefined') {
 			const stored = localStorage.getItem('tournament_bracket_state');
@@ -1280,6 +1384,191 @@ class BracketManager {
 					console.error('Error loading bracket state from local storage:', error);
 				}
 			}
+		}
+	}
+
+	splitMixedString(str) {
+	 const result = [];
+	 let current = '';
+	 let depth = 0;
+		
+	 for (let char of str) {
+	   if (char === '{') depth++;
+	   if (char === '}') depth--;
+	
+	   if (char === ',' && depth === 0) {
+	     result.push(current.trim());
+	     current = '';
+	   } else {
+	     current += char;
+	   }
+	 }
+	
+	 if (current.trim()) result.push(current.trim());
+	 return result;
+	}
+
+	
+	/**
+	 * Load bracket state from CSV
+	 */
+	LoadFromCSV(file) {
+  		if (file) {
+			//console.log(this.bracketData);
+
+			if (!this.bracketData) {
+				this.bracketData = {
+					stages: [],
+					matches: [],
+					matchGames: [],
+					participants: []
+				};
+			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const text = e.target.result;
+				const lines = text.split('\r\n');
+    			const headers = lines[0].split(',');
+				let i = 0;
+				//console.log("COMPETITORS");
+				while(i < lines.length)
+				{
+					//console.log(this.bracketData);
+					//console.log(lines[i]);
+    			    let currentLine = lines[i].split(',');
+					let headers = [];
+					//console.log(currentLine[0]);
+					switch (currentLine[0]){
+  						case "*competitors*":
+						  //console.log("_*competitors*_");
+						  //console.log(this.bracketData);
+						  this.competitors = [];
+						  ++i;
+						  while(lines[i]!="*stages*")
+						  {
+							this.competitors.push(lines[i]);	
+							++i;
+						  }
+  						  break;
+  						case "*stages*":
+						  //console.log("_*stages*_");
+						  //console.log(this.bracketData);
+						  this.bracketData.stages = [];
+						  ++i;
+    					 headers = lines[i++].split(',');
+						  while(lines[i] != "*matches*")
+						  {
+    						let currentline = lines[i].split(',');
+
+							let obj = {};
+    						for (let j = 0; j < headers.length; j++) {
+    							try {
+    						    	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    							} catch (e) {
+    						    	obj[headers[j].trim()] = currentline[j].trim();
+    							}
+    						}
+							this.bracketData.stages.push(obj);
+						 	++i;
+    					  }
+  						  break;
+  						case "*matches*":
+						  //console.log("_*matches*_");
+						  this.bracketData.matches = [];
+						  ++i;
+    					  headers = lines[i++].split(',');
+						  while(lines[i]!="*matchGames*")
+						  {
+    						let currentline = this.splitMixedString(lines[i]);
+
+							let obj = {};
+    						for (let j = 0, k = j; j < headers.length; j++, k++) {
+								let data = currentline[k];
+								//console.log(data);
+								if(data === undefined || data === "")
+								{
+    						    	obj[headers[j].trim()] = null;
+								}
+								else
+								{
+    								try {
+    						    		obj[headers[j].trim()] = JSON.parse(data);
+    								} catch (e) {
+    						    		obj[headers[j].trim()] = data;
+    								}
+								}
+    						}
+							this.bracketData.matches.push(obj);
+							++i;
+						  }
+  						  break;
+  						case "*matchGames*":
+						  //console.log("_*matchGames*_");
+						  this.bracketData.matchGames = [];
+						  ++i;
+						  if(lines[i] != "*participants*")
+						  {
+    					 	headers = lines[i++].split(',');
+						  }
+						  while(lines[i]!="*participants*")
+						  {
+    						let currentline = lines[i].split(',');
+
+    						if (currentline.length === headers.length) {
+								let obj = {};
+    						    for (let j = 0; j < headers.length; j++) {
+    								try {
+    						        	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    								} catch (e) {
+    						        	obj[headers[j].trim()] = currentline[j].trim();
+    								}
+    						    }
+								this.bracketData.matchGames.push(obj);
+    						}
+							++i;
+						  }
+  						  break;
+  						  case "*participants*":
+						  this.bracketData.participants = [];
+						  ++i;
+    					  headers = lines[i++].split(',');
+						  while(i < lines.length)
+						  {
+    						const currentline = lines[i].split(',');
+
+								let obj = {};
+    						    for (let j = 0; j < headers.length; j++) {
+    								try {
+    						        	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    								} catch (e) {
+    						        	obj[headers[j].trim()] = currentline[j];
+    								}
+    						    }
+							this.bracketData.participants.push(obj);
+							++i;
+						  }
+  						  break;
+					}
+				}
+				
+				this.isDraftMode = true;
+
+				if (this.bracketData) {
+					//console.log("DONE: ")
+					//console.log( this.bracketData);
+					//console.log( this.competitors);
+					this.saveToLocalStorage();
+					this.updateUI();
+					this.renderBracket();
+				}
+			};
+			reader.readAsText(file);
+    		return;
+		}
+		else
+		{
+			console.log("NO FILE FOUND");
 		}
 	}
 
@@ -1335,6 +1624,18 @@ if (typeof window !== 'undefined') {
 	} else {
 		setTimeout(initializeBracketManager, 100);
 	}
+	
+	window.SaveToCSV = function() {
+		if(window.bracketManager) {
+			window.bracketManager.SaveToCSV();
+		}
+	};
+
+	window.LoadFromCSV = function(file) {
+		if(window.bracketManager) {
+			window.bracketManager.LoadFromCSV(file);
+		}
+	};
 
 	window.validateBracket = function () {
 		if (window.bracketManager) {
