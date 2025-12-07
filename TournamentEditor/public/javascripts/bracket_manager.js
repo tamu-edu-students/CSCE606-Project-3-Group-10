@@ -238,39 +238,85 @@ class BracketManager {
 	 */
 	attachDragAndDrop() {
 		const bracketContainer = document.getElementById('bracket-viewer');
-		if (!bracketContainer) return;
+		if (!bracketContainer) {
+			console.error('Bracket container not found');
+			return;
+		}
 
-		const participantElements = bracketContainer.querySelectorAll(
-			'[data-participant-id], .participant, .bracket-participant'
-		);
+		console.log('Attaching drag and drop...');
 
-		participantElements.forEach((element) => {
+		// First add match IDs to the DOM
+		this.addMatchIdsToDOM();
+
+		const participantElements = bracketContainer.querySelectorAll('.participant');
+		console.log(`Found ${participantElements.length} participant elements`);
+
+		if (participantElements.length === 0) {
+			console.warn('No participant elements found - bracket may not be rendered yet');
+			return;
+		}
+
+		participantElements.forEach((element, index) => {
+			// Skip BYE participants
+			const nameDiv = element.querySelector('.name');
+			if (!nameDiv || nameDiv.classList.contains('bye')) {
+				console.log(`Skipping BYE participant at index ${index}`);
+				return;
+			}
+
+			// CRITICAL FIX: Also check the text content for BYE
+			const nameText = nameDiv.textContent.trim().replace(/^#\d+\s*/, '');
+			if (nameText === 'BYE' || nameText === 'null' || nameText === '' || nameText === 'TBD') {
+				console.log(`Skipping BYE/empty participant at index ${index}: "${nameText}"`);
+				return;
+			}
+
 			element.setAttribute('draggable', 'true');
 			element.style.cursor = 'grab';
 			element.classList.add('draggable-participant');
+
+			// Get match info
+			const matchElement = element.closest('.match');
+			if (matchElement) {
+				const matchId = matchElement.dataset.matchId;
+				element.dataset.matchId = matchId;
+				console.log(`Added drag to participant ${index} in match ${matchId}: "${nameText}"`);
+			}
 
 			element.addEventListener('dragstart', (e) => {
 				this.draggedParticipant = element;
 				element.style.opacity = '0.5';
 				e.dataTransfer.effectAllowed = 'move';
-				e.dataTransfer.setData('text/plain', element.textContent.trim());
+				
+				// Get competitor name
+				const competitorName = nameDiv.textContent.trim().replace(/^#\d+\s*/, '');
+				e.dataTransfer.setData('text/plain', competitorName);
+				
+				// Store source match ID
+				const sourceMatchId = element.dataset.matchId;
+				if (sourceMatchId) {
+					e.dataTransfer.setData('sourceMatchId', sourceMatchId);
+				}
+				
+				console.log('Dragging:', competitorName, 'from match:', sourceMatchId);
 			});
 
 			element.addEventListener('dragend', (e) => {
 				element.style.opacity = '1';
 				if (this.dragTarget) {
 					this.dragTarget.classList.remove('drag-over');
+					this.dragTarget.style.backgroundColor = '';
 				}
 				this.draggedParticipant = null;
 				this.dragTarget = null;
 			});
 		});
 
-		const dropZones = bracketContainer.querySelectorAll(
-			'[data-participant-id], .participant, .bracket-participant, .bracket-slot, [class*="slot"]'
-		);
+		const dropZones = bracketContainer.querySelectorAll('.participant');
+		console.log(`Found ${dropZones.length} drop zones`);
 
-		dropZones.forEach((zone) => {
+		dropZones.forEach((zone, index) => {
+			// Allow dropping on any slot (including BYE slots)
 			zone.addEventListener('dragover', (e) => {
 				e.preventDefault();
 				e.dataTransfer.dropEffect = 'move';
@@ -289,11 +335,176 @@ class BracketManager {
 				zone.classList.remove('drag-over');
 				zone.style.backgroundColor = '';
 
-				if (this.draggedParticipant && this.draggedParticipant !== zone) {
-					this.handleParticipantMove(this.draggedParticipant, zone);
+				if (!this.draggedParticipant || this.draggedParticipant === zone) {
+					return;
 				}
+
+				// Get competitor name and source match
+				const competitorName = e.dataTransfer.getData('text/plain');
+				const sourceMatchId = e.dataTransfer.getData('sourceMatchId');
+				
+				// Get target match
+				const targetMatchElement = zone.closest('.match');
+				const targetMatchId = targetMatchElement?.dataset.matchId;
+
+				console.log('Drop:', competitorName, 'from match', sourceMatchId, 'to match', targetMatchId);
+
+				// Handle the drop
+				this.handleCompetitorDrop(competitorName, sourceMatchId, targetMatchId, zone);
 			});
 		});
+
+		console.log('Drag and drop attached successfully');
+	}
+
+	addMatchIdsToDOM() {
+		const bracketContainer = document.getElementById('bracket-viewer');
+		if (!bracketContainer) {
+			console.error('Bracket container not found for match IDs');
+			return;
+		}
+
+		const matchElements = bracketContainer.querySelectorAll('.match');
+		console.log(`Adding match IDs to ${matchElements.length} matches`);
+		
+		matchElements.forEach((matchEl, index) => {
+			if (this.bracketData && this.bracketData.matches[index]) {
+				matchEl.dataset.matchId = this.bracketData.matches[index].id;
+				console.log(`Match ${index} assigned ID: ${this.bracketData.matches[index].id}`);
+			}
+		});
+
+		console.log('Finished adding match IDs to DOM');
+	}
+
+
+	/**
+	 * Handle competitor drop - advance to next round or swap in same round
+	 */
+	handleCompetitorDrop(competitorName, sourceMatchId, targetMatchId, targetElement) {
+		if (!this.bracketData || !this.bracketData.matches) {
+			console.error('No bracket data');
+			return;
+		}
+
+		const sourceMatch = this.bracketData.matches.find(m => m.id == sourceMatchId);
+		const targetMatch = this.bracketData.matches.find(m => m.id == targetMatchId);
+
+		if (!sourceMatch || !targetMatch) {
+			console.error('Match not found');
+			return;
+		}
+
+		console.log('Source match round:', sourceMatch.round_id, 'Target match round:', targetMatch.round_id);
+		console.log('Source next_match_id:', sourceMatch.next_match_id, 'Target id:', targetMatch.id);
+
+		// Check if advancing to next round
+		if (sourceMatch.next_match_id === targetMatch.id) {
+			console.log('Advancing to next round');
+			this.advanceCompetitor(competitorName, sourceMatch, targetMatch, targetElement);
+		} else if (sourceMatch.round_id === targetMatch.round_id && sourceMatch.round_id === 1) {
+			// Only allow swapping in Round 1
+			console.log('Swapping in Round 1');
+			this.handleParticipantMove(this.draggedParticipant, targetElement);
+		} else {
+			console.warn('Invalid move');
+			this.showNotification('Can only advance to next round or swap within Round 1', 'error');
+		}
+	}
+
+
+	/**
+	 * Advance competitor to next round
+	 */
+	advanceCompetitor(competitorName, sourceMatch, targetMatch, targetElement) {
+		console.log('Advancing', competitorName, 'to match', targetMatch.id);
+
+		// Find participant
+		const participant = this.bracketData.participants.find(p => p.name === competitorName);
+		if (!participant) {
+			console.error('Participant not found:', competitorName);
+			return;
+		}
+
+		// CRITICAL FIX: Determine which slot to place the competitor in
+		// We need to figure out if this drop target is opponent1 or opponent2
+		
+		// Get the parent match element
+		const matchElement = targetElement.closest('.match');
+		if (!matchElement) {
+			console.error('Could not find match element');
+			return;
+		}
+
+		// Get all participants in this match
+		const participantsInMatch = matchElement.querySelectorAll('.participant');
+		
+		// Find which participant was dropped on (0 = opponent1, 1 = opponent2)
+		let targetSlot = 'opponent1';
+		participantsInMatch.forEach((p, index) => {
+			if (p === targetElement) {
+				targetSlot = index === 0 ? 'opponent1' : 'opponent2';
+				console.log(`Drop target is at index ${index}, setting ${targetSlot}`);
+			}
+		});
+
+		// Check if target slot is already occupied
+		const currentOccupant = targetMatch[targetSlot];
+		if (currentOccupant && currentOccupant.id) {
+			const occupantName = this.bracketData.participants.find(p => p.id === currentOccupant.id)?.name;
+			if (occupantName && occupantName !== 'BYE' && occupantName !== 'null') {
+				const replace = confirm(
+					`${targetSlot === 'opponent1' ? 'Top' : 'Bottom'} slot already has "${occupantName}". Replace with "${competitorName}"?`
+				);
+				if (!replace) {
+					console.log('User cancelled replacement');
+					return;
+				}
+			}
+		}
+
+		console.log('Setting', targetSlot, 'to participant ID', participant.id);
+
+		// Set ONLY the target opponent slot
+		targetMatch[targetSlot] = {
+			id: participant.id,
+		};
+
+		// Save and re-render
+		this.saveToLocalStorage();
+		this.renderBracket();
+		
+		this.showNotification(`${competitorName} advanced to ${targetSlot === 'opponent1' ? 'top' : 'bottom'} slot!`, 'success');
+	}
+
+
+	/**
+	 * Show notification
+	 */
+	showNotification(message, type = 'info') {
+		const notification = document.createElement('div');
+		notification.textContent = message;
+		notification.style.cssText = `
+			position: fixed;
+			top: 20px;
+			right: 20px;
+			padding: 12px 20px;
+			border-radius: 8px;
+			background: ${type === 'success' ? '#10b981' : type === 'error' ? '#ef4444' : '#3b82f6'};
+			color: white;
+			font-weight: 500;
+			box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+			z-index: 9999;
+			animation: slideIn 0.3s ease;
+		`;
+
+		document.body.appendChild(notification);
+
+		setTimeout(() => {
+			notification.style.animation = 'slideOut 0.3s ease';
+			setTimeout(() => notification.remove(), 300);
+		}, 3000);
+	}
 
 		console.log('Drag and drop attached successfully');
 	}
@@ -639,7 +850,7 @@ class BracketManager {
 		}
 	}
 
-	/**
+/**Collapse commentComment on line R483DJPetika commented on Dec 6, 2025 DJPetikaon Dec 6, 2025MemberMore actionsshouldn't have deleted thisReactWrite a replyCode has comments. Press enter to view.
 	 * Save bracket state to CSV
 	 */
 	SaveToCSV() {
@@ -799,7 +1010,7 @@ class BracketManager {
 	 */
 	LoadFromCSV(file) {
   		if (file) {
-			console.log(this.bracketData);
+			//console.log(this.bracketData);
 
 			if (!this.bracketData) {
 				this.bracketData = {
@@ -809,6 +1020,156 @@ class BracketManager {
 					participants: []
 				};
 			}
+
+			const reader = new FileReader();
+			reader.onload = (e) => {
+				const text = e.target.result;
+				const lines = text.split('\r\n');
+    			const headers = lines[0].split(',');
+				let i = 0;
+				//console.log("COMPETITORS");
+				while(i < lines.length)
+				{
+					//console.log(this.bracketData);
+					//console.log(lines[i]);
+    			    let currentLine = lines[i].split(',');
+					let headers = [];
+					//console.log(currentLine[0]);
+					switch (currentLine[0]){
+  						case "*competitors*":
+						  //console.log("_*competitors*_");
+						  //console.log(this.bracketData);
+						  this.competitors = [];
+						  ++i;
+						  while(lines[i]!="*stages*")
+						  {
+							this.competitors.push(lines[i]);	
+							++i;
+						  }
+  						  break;
+  						case "*stages*":
+						  //console.log("_*stages*_");
+						  //console.log(this.bracketData);
+						  this.bracketData.stages = [];
+						  ++i;
+    					 headers = lines[i++].split(',');
+						  while(lines[i] != "*matches*")
+						  {
+    						let currentline = lines[i].split(',');
+
+							let obj = {};
+    						for (let j = 0; j < headers.length; j++) {
+    							try {
+    						    	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    							} catch (e) {
+    						    	obj[headers[j].trim()] = currentline[j].trim();
+    							}
+    						}
+							this.bracketData.stages.push(obj);
+						 	++i;
+    					  }
+  						  break;
+  						case "*matches*":
+						  //console.log("_*matches*_");
+						  this.bracketData.matches = [];
+						  ++i;
+    					  headers = lines[i++].split(',');
+						  while(lines[i]!="*matchGames*")
+						  {
+    						let currentline = this.splitMixedString(lines[i]);
+
+							let obj = {};
+    						for (let j = 0, k = j; j < headers.length; j++, k++) {
+								let data = currentline[k];
+								//console.log(data);
+								if(data === undefined || data === "")
+								{
+    						    	obj[headers[j].trim()] = null;
+								}
+								else
+								{
+    								try {
+    						    		obj[headers[j].trim()] = JSON.parse(data);
+    								} catch (e) {
+    						    		obj[headers[j].trim()] = data;
+    								}
+								}
+    						}
+							this.bracketData.matches.push(obj);
+							++i;
+						  }
+  						  break;
+  						case "*matchGames*":
+						  //console.log("_*matchGames*_");
+						  this.bracketData.matchGames = [];
+						  ++i;
+						  if(lines[i] != "*participants*")
+						  {
+    					 	headers = lines[i++].split(',');
+						  }
+						  while(lines[i]!="*participants*")
+						  {
+    						let currentline = lines[i].split(',');
+
+    						if (currentline.length === headers.length) {
+								let obj = {};
+    						    for (let j = 0; j < headers.length; j++) {
+    								try {
+    						        	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    								} catch (e) {
+    						        	obj[headers[j].trim()] = currentline[j].trim();
+    								}
+    						    }
+								this.bracketData.matchGames.push(obj);
+    						}
+							++i;
+						  }
+  						  break;
+  						  case "*participants*":
+						  this.bracketData.participants = [];
+						  ++i;
+    					  headers = lines[i++].split(',');
+						  while(i < lines.length)
+						  {
+    						const currentline = lines[i].split(',');
+
+								let obj = {};
+    						    for (let j = 0; j < headers.length; j++) {
+    								try {
+    						        	obj[headers[j].trim()] = JSON.parse(currentline[j]);
+    								} catch (e) {
+    						        	obj[headers[j].trim()] = currentline[j];
+    								}
+    						    }
+							this.bracketData.participants.push(obj);
+							++i;
+						  }
+  						  break;
+					}
+				}
+				
+				this.isDraftMode = true;
+
+				if (this.bracketData) {
+					//console.log("DONE: ")
+					//console.log( this.bracketData);
+					//console.log( this.competitors);
+					this.saveToLocalStorage();
+					this.updateUI();
+					this.renderBracket();
+				}
+			};
+			reader.readAsText(file);
+    		return;
+		}
+		else
+		{
+			console.log("NO FILE FOUND");
+		}
+	}
+
+	updateCompetitorCount(count) {
+		const numCompetitors = parseInt(count, 10);
 
 			const reader = new FileReader();
 			reader.onload = (e) => {
@@ -1001,6 +1362,18 @@ if (typeof window !== 'undefined') {
 	} else {
 		setTimeout(initializeBracketManager, 100);
 	}
+	
+	window.SaveToCSV = function() {
+		if(window.bracketManager) {
+			window.bracketManager.SaveToCSV();
+		}
+	};
+
+	window.LoadFromCSV = function(file) {
+		if(window.bracketManager) {
+			window.bracketManager.LoadFromCSV(file);
+		}
+	};
 
 	window.validateBracket = function () {
 		if (window.bracketManager) {
